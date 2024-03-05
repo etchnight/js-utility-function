@@ -130,9 +130,13 @@ export class TreeTools {
     return listFilter(tree);
   };
 
-  public forEach = <T extends Tree>(tree: T[], func: (node: T) => void) => {
-    const list = [...tree],
-      { children } = this.config;
+  public forEach = <T extends Tree | Element>(
+    tree: T[],
+    func: (node: T) => void
+  ) => {
+    const list = [...tree];
+    const children =
+      tree instanceof Element ? "children" : this.config.children;
     for (let i = 0; i < list.length; i++) {
       func(list[i]);
       list[i][children] && list.splice(i + 1, 0, ...list[i][children]);
