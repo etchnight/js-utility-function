@@ -46,6 +46,9 @@ export class TreeTools {
     return result;
   };
 
+  /**
+   * 广度优先
+   */
   public findNode = <T extends Tree>(tree: T[], func: (node: T) => boolean) => {
     const { children } = this.config;
     const list = [...tree];
@@ -127,13 +130,60 @@ export class TreeTools {
     return listFilter(tree);
   };
 
-  public forEach = <T extends Tree>(tree: T[], func: (node: T) => boolean) => {
+  public forEach = <T extends Tree>(tree: T[], func: (node: T) => void) => {
     const list = [...tree],
       { children } = this.config;
     for (let i = 0; i < list.length; i++) {
       func(list[i]);
       list[i][children] && list.splice(i + 1, 0, ...list[i][children]);
     }
+    return tree;
+  };
+
+  /**
+   *
+   * @param childrenKey map生成树的children属性的键名
+   */
+  public map = <T extends Tree, U extends Tree>(
+    tree: T[],
+    func: (node: T) => U,
+    childrenKey: string
+  ) => {
+    const list = [...tree];
+    let id = 1;
+    const newObj = (pid: number) => {
+      return {
+        id: id++,
+        result: {} as U,
+        pid: pid,
+      };
+    };
+    let resultList = list.map(() => newObj(0));
+    //let resultList: U[] = [...result];
+    const { children } = this.config;
+    for (let i = 0; i < list.length; i++) {
+      resultList[i].result = func(list[i]);
+      if (list[i][children]) {
+        list.splice(i + 1, 0, ...list[i][children]);
+        resultList.splice(
+          i + 1,
+          0,
+          ...list[i][children].map(() => newObj(resultList[i].id))
+        );
+      }
+    }
+    const nodeMap: Map<string, any> = new Map();
+    let result: U[] = [];
+    for (const node of resultList) {
+      node.result[childrenKey] = node.result[childrenKey] || []; //todo 改变了node
+      nodeMap.set(`${node.id}`, node.result);
+    }
+    console.log(nodeMap);
+    for (const node of resultList) {
+      const parent = nodeMap.get(`${node.pid}`);
+      (parent ? parent[childrenKey] : result).push(node.result);
+    }
+    return result;
   };
 
   private _insert = <T extends Tree>(
@@ -159,9 +209,14 @@ export class TreeTools {
     this._insert(tree, oldNode, newNode, 1);
   };
 
+  /**
+   *
+   * @param withChild 为false时，将会把删除节点的子级级别提升一级而非删除
+   */
   public removeNode = <T extends Tree>(
     tree: T[],
-    func: (node: T) => boolean
+    func: (node: T) => boolean,
+    withChild = true
   ) => {
     const { children } = this.config;
     const list = [tree];
@@ -175,7 +230,14 @@ export class TreeTools {
         [] as number[]
       );
       delList.reverse();
-      delList.forEach((idx) => nodeList.splice(idx, 1));
+      delList.forEach((idx) => {
+        if (withChild) {
+          nodeList.splice(idx, 1);
+        } else if (nodeList[idx].children) {
+          console.log(nodeList[idx].children);
+          nodeList.splice(idx, 1, ...nodeList[idx].children);
+        }
+      });
       const childrenList = nodeList
         .map((n) => n[children])
         .filter((l) => l && l.length);
