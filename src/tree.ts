@@ -26,6 +26,7 @@ export class TreeTools {
     })[] = [];
     const { id, children, pid } = this.config;
     for (const node of list) {
+      //@ts-ignore
       node[children] = node[children] || []; //todo 改变了node
       nodeMap.set(node[id], node);
     }
@@ -123,6 +124,7 @@ export class TreeTools {
       return list
         .map((node) => ({ ...node }))
         .filter((node) => {
+          //@ts-ignore
           node[children] = node[children] && listFilter(node[children]); //todo 改变了node
           return func(node) || (node[children] && node[children].length);
         });
@@ -139,6 +141,7 @@ export class TreeTools {
       tree instanceof Element ? "children" : this.config.children;
     for (let i = 0; i < list.length; i++) {
       func(list[i]);
+      //@ts-ignore
       list[i][children] && list.splice(i + 1, 0, ...list[i][children]);
     }
     return tree;
@@ -158,7 +161,7 @@ export class TreeTools {
     const newObj = (pid: number) => {
       return {
         id: id++,
-        result: {} as U,
+        result: {} as Tree,
         pid: pid,
       };
     };
