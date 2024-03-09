@@ -132,13 +132,24 @@ export class TreeTools {
     return listFilter(tree);
   };
 
+  /**
+   * 深度优先先序遍历
+   */
   public forEach = <T extends Tree | Element>(
     tree: T[],
     func: (node: T) => void
   ) => {
     const list = [...tree];
-    const children =
-      tree instanceof Element ? "children" : this.config.children;
+    let children: string;
+    try {
+      children =
+        typeof window && tree instanceof Element
+          ? "children"
+          : this.config.children;
+    } catch (e) {
+      children = this.config.children;
+    }
+
     for (let i = 0; i < list.length; i++) {
       func(list[i]);
       //@ts-ignore

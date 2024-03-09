@@ -1,26 +1,57 @@
 "use strict";
 import { Quicker } from "./quicker";
+import { TreeTools } from "./src/tree";
 
-const quicker = new Quicker();
+let allVar = {
+  input: [
+    {
+      id: "1",
+      title: "节点1",
+      children: [
+        {
+          id: "1-1",
+          title: "节点1-1",
+        },
+        {
+          id: "1-2",
+          title: "节点1-2",
+        },
+      ],
+    },
+    {
+      id: "2",
+      title: "节点2",
+      children: [
+        {
+          id: "2-1",
+          title: "节点2-1",
+          children: [
+            {
+              id: "2-1-1",
+              title: "节点2-1-1",
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+const quicker = new Quicker(allVar);
+
 const quickerGetVar = quicker.quickerGetVar;
 const quickerSetVar = quicker.quickerSetVar;
 
-//*初始赋值
-quicker.quicker = {
-  数字: 12345,
-};
-
-const somefunc = (input) => {
-  return input;
-};
-
 /**
- * quicker用主函数
+ * quicker测试
  */
 function exec() {
-  let input = quickerGetVar("text"); // 读取text变量值, (text 是动作里的变量)
-  let output = somefunc(input);
-  quickerSetVar("text", output); //输出修改后的值到text变量中。
+  var input = quickerGetVar("input") as typeof allVar.input; // 读取text变量值, (text 是动作里的变量)
+  const treeTools = new TreeTools({ id: "id", pid: "parentId" });
+  var output = treeTools.forEach(input, (e) => {
+    console.log(e.id);
+  });
+  quickerSetVar("output", output); //输出修改后的值到text变量中。
+  quickerSetVar("input", input); //输出修改后的值到text变量中。
   return 0; //返回0表示成功。返回其他数字表示失败。
 }
 
