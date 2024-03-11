@@ -27,3 +27,14 @@ export class Dev {
     return result;
   }
 }
+
+/**
+ *
+ * @param ms 毫秒
+ * @returns
+ */
+export function sleep(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
