@@ -7,16 +7,29 @@ type Config = typeof DEFAULT_CONFIG;
 type Tree = {
   [key: string]: any;
 };
-export class TreeTools {
+export class TreeTools<T extends Tree> {
   public config: Config;
-  constructor(config: Partial<Config> = {}) {
+  public tree: T[];
+  public list: T[];
+  constructor(
+    config: Partial<Config> = {},
+    input: {
+      tree?: T[];
+      list?: T[];
+    }
+  ) {
     this.config = Object.assign({}, DEFAULT_CONFIG, config);
+    if (!input.tree && !input.list) {
+      throw "输入中至少含有tree或list";
+    }
+    this.tree = input.tree || this.fromList(input.list as T[]);
+    this.list = input.list || this.toList(input.tree as T[]);
   }
 
   /**
    * @returns 将在原类型中添加类 children 属性，需要使用 as 关键字指明类型
    */
-  public fromList = <T extends Tree>(list: T[]) => {
+  private fromList = <T extends Tree>(list: T[]) => {
     /**
      * 键值对为 节点id : 节点对象
      */
@@ -37,7 +50,7 @@ export class TreeTools {
     return result;
   };
 
-  public toList = <T extends Tree>(tree: T[]) => {
+  private toList = <T extends Tree>(tree: T[]) => {
     const { children } = this.config;
     const result = [...tree];
     for (let i = 0; i < result.length; i++) {
@@ -50,7 +63,8 @@ export class TreeTools {
   /**
    * 广度优先
    */
-  public findNode = <T extends Tree>(tree: T[], func: (node: T) => boolean) => {
+  public findNode = (func: (node: T) => boolean) => {
+    const tree = this.tree;
     const { children } = this.config;
     const list = [...tree];
     for (let node of list) {
@@ -59,10 +73,8 @@ export class TreeTools {
     }
     return null;
   };
-  public findNodeAll = <T extends Tree>(
-    tree: T[],
-    func: (node: T) => boolean
-  ) => {
+  public findNodeAll = (func: (node: T) => boolean) => {
+    const tree = this.tree;
     const { children } = this.config;
     const list = [...tree];
     const result = [];
@@ -73,7 +85,8 @@ export class TreeTools {
     return result;
   };
 
-  public findPath = <T extends Tree>(tree: T[], func: (node: T) => boolean) => {
+  public findPath = (func: (node: T) => boolean) => {
+    const tree = this.tree;
     const path = [];
     const list = [...tree];
     const visitedSet = new Set();
@@ -93,10 +106,8 @@ export class TreeTools {
     return null;
   };
 
-  public findPathAll = <T extends Tree>(
-    tree: T[],
-    func: (node: T) => boolean
-  ) => {
+  public findPathAll = (func: (node: T) => boolean) => {
+    const tree = this.tree;
     const path = [],
       list = [...tree],
       result = [];
@@ -118,7 +129,8 @@ export class TreeTools {
   };
 
   //todo
-  public filter = <T extends Tree>(tree: T[], func: (node: T) => boolean) => {
+  public filter = (func: (node: T) => boolean) => {
+    const tree = this.tree;
     const { children } = this.config;
     function listFilter(list: T[]) {
       return list
@@ -134,11 +146,10 @@ export class TreeTools {
 
   /**
    * 深度优先先序遍历
+   * todo 需要支持Element类型
    */
-  public forEach = <T extends Tree | Element>(
-    tree: T[],
-    func: (node: T) => void
-  ) => {
+  public forEach = (func: (node: T) => void) => {
+    const tree = this.tree;
     const list = [...tree];
     let children: string;
     try {
@@ -162,11 +173,8 @@ export class TreeTools {
    *
    * @param childrenKey map生成树的children属性的键名
    */
-  public map = <T extends Tree, U extends Tree>(
-    tree: T[],
-    func: (node: T) => U,
-    childrenKey: string
-  ) => {
+  public map = <U extends Tree>(func: (node: T) => U, childrenKey: string) => {
+    const tree = this.tree;
     const list = [...tree];
     let id = 1;
     const newObj = (pid: number) => {
@@ -204,12 +212,8 @@ export class TreeTools {
     return result;
   };
 
-  private _insert = <T extends Tree>(
-    tree: T[],
-    node: T,
-    targetNode: T,
-    after: 0 | 1
-  ) => {
+  private _insert = (node: T, targetNode: T, after: 0 | 1) => {
+    const tree = this.tree;
     const { children } = this.config;
     function insert(list: T[]) {
       let idx = list.indexOf(node);
@@ -220,22 +224,19 @@ export class TreeTools {
     insert(tree);
   };
 
-  public insertBefore = <T extends Tree>(tree: T[], newNode: T, oldNode: T) => {
-    this._insert(tree, oldNode, newNode, 0);
+  public insertBefore = (newNode: T, oldNode: T) => {
+    this._insert(oldNode, newNode, 0);
   };
-  public insertAfter = <T extends Tree>(tree: T[], newNode: T, oldNode: T) => {
-    this._insert(tree, oldNode, newNode, 1);
+  public insertAfter = (newNode: T, oldNode: T) => {
+    this._insert(oldNode, newNode, 1);
   };
 
   /**
    *
    * @param withChild 为false时，将会把删除节点的子级级别提升一级而非删除
    */
-  public removeNode = <T extends Tree>(
-    tree: T[],
-    func: (node: T) => boolean,
-    withChild = true
-  ) => {
+  public removeNode = (func: (node: T) => boolean, withChild = true) => {
+    const tree = this.tree;
     const { children } = this.config;
     const list = [tree];
     while (list.length) {
