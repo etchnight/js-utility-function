@@ -64,8 +64,19 @@ export class TreeTools<T extends Tree> {
    * 广度优先
    */
   public findNode = (func: (node: T) => boolean) => {
-    const tree = this.tree;
-    const { children } = this.config;
+    const node = TreeTools.findNodeStatic(this.tree, func, this.config);
+    if (node) {
+      return new TreeTools(this.config, { tree: [node] });
+    } else {
+      return null;
+    }
+  };
+  static findNodeStatic = <T extends Tree>(
+    tree: T[],
+    func: (node: T) => boolean,
+    config: Config = DEFAULT_CONFIG
+  ) => {
+    const { children } = config;
     const list = [...tree];
     for (let node of list) {
       if (func(node)) return node;
@@ -145,20 +156,22 @@ export class TreeTools<T extends Tree> {
   };
 
   /**
-   * 深度优先先序遍历
+   * 深度优先先序遍历，就地改变tree
    * todo 需要支持Element类型
    */
-  public forEach = (func: (node: T) => void) => {
-    const tree = this.tree;
+  static forEachStatic = <T extends Tree>(
+    tree: T[],
+    func: (node: T) => void,
+    config: Config = DEFAULT_CONFIG
+  ) => {
+    //const tree = this.tree;
     const list = [...tree];
     let children: string;
     try {
       children =
-        typeof window && tree instanceof Element
-          ? "children"
-          : this.config.children;
+        typeof window && tree instanceof Element ? "children" : config.children;
     } catch (e) {
-      children = this.config.children;
+      children = config.children;
     }
 
     for (let i = 0; i < list.length; i++) {
@@ -167,6 +180,12 @@ export class TreeTools<T extends Tree> {
       list[i][children] && list.splice(i + 1, 0, ...list[i][children]);
     }
     return tree;
+  };
+  public forEach = (func: (node: T) => void) => {
+    const newTree = TreeTools.forEachStatic(this.tree, func, this.config);
+    this.tree = newTree;
+    this.list = this.toList(newTree);
+    return newTree;
   };
 
   /**
@@ -204,7 +223,7 @@ export class TreeTools<T extends Tree> {
       node.result[childrenKey] = node.result[childrenKey] || []; //todo 改变了node
       nodeMap.set(`${node.id}`, node.result);
     }
-    console.log(nodeMap);
+    //console.log(nodeMap);
     for (const node of resultList) {
       const parent = nodeMap.get(`${node.pid}`);
       (parent ? parent[childrenKey] : result).push(node.result);
@@ -226,9 +245,11 @@ export class TreeTools<T extends Tree> {
 
   public insertBefore = (newNode: T, oldNode: T) => {
     this._insert(oldNode, newNode, 0);
+    this.list = this.toList(this.tree);
   };
   public insertAfter = (newNode: T, oldNode: T) => {
     this._insert(oldNode, newNode, 1);
+    this.list = this.toList(this.tree);
   };
 
   /**
