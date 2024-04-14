@@ -30,6 +30,17 @@ export class Dev {
 
 /**
  *
+ * @param ms 毫秒
+ * @returns
+ */
+export function sleep(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/**
+ *
  * @deprecated 无法实现
  * @param fn 希望退出的函数
  * @param throwVar 控制退出的变量名
