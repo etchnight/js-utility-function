@@ -84,7 +84,7 @@ export async function interruptByOut(
  * @returns
  */
 export const promiseExample = (timeout: number, text: string) => {
-  return new Promise<string>((resolve, reject) => {
+  return new Promise<string>((resolve, _reject) => {
     setTimeout(() => {
       console.log(text);
       resolve(text);

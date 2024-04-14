@@ -1,43 +1,120 @@
 "use strict";
 
-require("core-js/modules/es.array.reverse.js");
 require("core-js/modules/es.date.to-string.js");
 require("core-js/modules/es.object.define-property.js");
 require("core-js/modules/es.object.to-string.js");
 require("core-js/modules/es.parse-int.js");
+require("core-js/modules/es.regexp.exec.js");
 require("core-js/modules/es.regexp.to-string.js");
+require("core-js/modules/es.string.replace.js");
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.toChineseNum = void 0;
+exports.chineseToNum = exports.numtoChinese = void 0;
 /**
- * @description - 将数字转换成中文大写的表示，处理到万级别
- * - 例如 toChineseNum(12345)，返回 一万二千三百四十五。
+ * @description  将数字（整数）转为汉字，从零到一亿亿
+ * https://juejin.cn/post/6892372242143903758
  */
-function toChineseNum(num) {
-  var getWan = function getWan(temp) {
-    var changeNum = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
-    var unit = ["", "十", "百", "千", "万"];
-    var strArr = temp.toString().split("").reverse();
-    var newNum = "";
-    for (var i = 0; i < strArr.length; i++) {
-      var nowNum = "";
-      if (i === 0 && strArr[i] === "0") {
-        nowNum = "";
-      } else if (i > 0 && strArr[i] === "0" && strArr[i - 1] === "0") {
-        nowNum = "";
-      } else {
-        nowNum = changeNum[parseInt(strArr[i])] + (strArr[i] === "0" ? unit[0] : unit[i]);
-      }
-      newNum = nowNum + newNum;
-    }
-    return newNum;
-  };
-  var overWan = Math.floor(num / 10000);
-  var noWan = num % 10000;
-  /*if (noWan.toString().length < 4) {
-    noWan = "0" + noWan;
-  }*/
-  return overWan ? getWan(overWan) + "万" + getWan(noWan) : getWan(num);
+function numtoChinese(num) {
+  var chNums = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+  var units = ["", "十", "百", "千", "万", "十", "百", "千", "亿", "十", "百", "千", "万", "十", "百", "千", "亿"]; //可继续追加更高位转换值
+  if (!num || isNaN(num)) {
+    return "零";
+  }
+  var english = num.toString().split("");
+  var result = "";
+  for (var i = 0; i < english.length; i++) {
+    var des_i = english.length - 1 - i; //倒序排列设值
+    result = units[i] + result;
+    var arr1_index = english[des_i];
+    result = chNums[parseInt(arr1_index)] + result;
+  }
+  //将【零千、零百】换成【零】 【十零】换成【十】
+  result = result.replace(/零(千|百|十)/g, "零").replace(/十零/g, "十");
+  //合并中间多个零为一个零
+  result = result.replace(/零+/g, "零");
+  //将【零亿】换成【亿】【零万】换成【万】
+  result = result.replace(/零亿/g, "亿").replace(/零万/g, "万");
+  //将【亿万】换成【亿】
+  result = result.replace(/亿万/g, "亿");
+  //移除末尾的零
+  result = result.replace(/零+$/, "");
+  //将【零一十】换成【零十】
+  //result = result.replace(/零一十/g, '零十');//貌似正规读法是零一十
+  //将【一十】换成【十】
+  result = result.replace(/^一十/g, "十");
+  return result;
 }
-exports.toChineseNum = toChineseNum;
+exports.numtoChinese = numtoChinese;
+/**
+ * https://blog.csdn.net/weixin_48888726/article/details/127774053
+ * @param chnStr
+ * @returns
+ */
+function chineseToNum(chnStr) {
+  var _a, _b;
+  var chnNumChar = {
+    零: 0,
+    一: 1,
+    二: 2,
+    两: 2,
+    三: 3,
+    四: 4,
+    五: 5,
+    六: 6,
+    七: 7,
+    八: 8,
+    九: 9
+  };
+  var chnNameValue = {
+    十: {
+      value: 10,
+      secUnit: false
+    },
+    百: {
+      value: 100,
+      secUnit: false
+    },
+    千: {
+      value: 1000,
+      secUnit: false
+    },
+    万: {
+      value: 10000,
+      secUnit: true
+    },
+    亿: {
+      value: 100000000,
+      secUnit: true
+    }
+  };
+  var rtn = 0;
+  var section = 0;
+  var number = 0;
+  var secUnit = false;
+  var str = chnStr.split("");
+  for (var i = 0; i < str.length; i++) {
+    var num = chnNumChar[str[i]];
+    if (typeof num !== "undefined") {
+      number = num;
+      if (i === str.length - 1) {
+        section += number;
+      }
+    } else {
+      var unit = (_a = chnNameValue[str[i]]) === null || _a === void 0 ? void 0 : _a.value;
+      secUnit = (_b = chnNameValue[str[i]]) === null || _b === void 0 ? void 0 : _b.secUnit;
+      if (unit) {
+        if (secUnit) {
+          section = (section + number) * unit;
+          rtn += section;
+          section = 0;
+        } else {
+          section += number * unit;
+        }
+      }
+      number = 0;
+    }
+  }
+  return rtn + section;
+}
+exports.chineseToNum = chineseToNum;

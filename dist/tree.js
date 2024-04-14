@@ -7,7 +7,7 @@ const DEFAULT_CONFIG = {
     pid: "pid",
 };
 class TreeTools {
-    constructor(config = {}) {
+    constructor(config = {}, input) {
         /**
          * @returns 将在原类型中添加类 children 属性，需要使用 as 关键字指明类型
          */
@@ -42,17 +42,17 @@ class TreeTools {
         /**
          * 广度优先
          */
-        this.findNode = (tree, func) => {
-            const { children } = this.config;
-            const list = [...tree];
-            for (let node of list) {
-                if (func(node))
-                    return node;
-                node[children] && list.push(...node[children]);
+        this.findNode = (func) => {
+            const node = TreeTools.findNodeStatic(this.tree, func, this.config);
+            if (node) {
+                return new TreeTools(this.config, { tree: [node] });
             }
-            return null;
+            else {
+                return null;
+            }
         };
-        this.findNodeAll = (tree, func) => {
+        this.findNodeAll = (func) => {
+            const tree = this.tree;
             const { children } = this.config;
             const list = [...tree];
             const result = [];
@@ -62,7 +62,8 @@ class TreeTools {
             }
             return result;
         };
-        this.findPath = (tree, func) => {
+        this.findPath = (func) => {
+            const tree = this.tree;
             const path = [];
             const list = [...tree];
             const visitedSet = new Set();
@@ -83,7 +84,8 @@ class TreeTools {
             }
             return null;
         };
-        this.findPathAll = (tree, func) => {
+        this.findPathAll = (func) => {
+            const tree = this.tree;
             const path = [], list = [...tree], result = [];
             const visitedSet = new Set(), { children } = this.config;
             while (list.length) {
@@ -102,7 +104,8 @@ class TreeTools {
             return result;
         };
         //todo
-        this.filter = (tree, func) => {
+        this.filter = (func) => {
+            const tree = this.tree;
             const { children } = this.config;
             function listFilter(list) {
                 return list
@@ -115,21 +118,18 @@ class TreeTools {
             }
             return listFilter(tree);
         };
-        this.forEach = (tree, func) => {
-            const list = [...tree];
-            const children = tree instanceof Element ? "children" : this.config.children;
-            for (let i = 0; i < list.length; i++) {
-                func(list[i]);
-                //@ts-ignore
-                list[i][children] && list.splice(i + 1, 0, ...list[i][children]);
-            }
-            return tree;
+        this.forEach = (func) => {
+            const newTree = TreeTools.forEachStatic(this.tree, func, this.config);
+            this.tree = newTree;
+            this.list = this.toList(newTree);
+            return newTree;
         };
         /**
          *
          * @param childrenKey map生成树的children属性的键名
          */
-        this.map = (tree, func, childrenKey) => {
+        this.map = (func, childrenKey) => {
+            const tree = this.tree;
             const list = [...tree];
             let id = 1;
             const newObj = (pid) => {
@@ -155,14 +155,15 @@ class TreeTools {
                 node.result[childrenKey] = node.result[childrenKey] || []; //todo 改变了node
                 nodeMap.set(`${node.id}`, node.result);
             }
-            console.log(nodeMap);
+            //console.log(nodeMap);
             for (const node of resultList) {
                 const parent = nodeMap.get(`${node.pid}`);
                 (parent ? parent[childrenKey] : result).push(node.result);
             }
             return result;
         };
-        this._insert = (tree, node, targetNode, after) => {
+        this._insert = (node, targetNode, after) => {
+            const tree = this.tree;
             const { children } = this.config;
             function insert(list) {
                 let idx = list.indexOf(node);
@@ -172,17 +173,20 @@ class TreeTools {
             }
             insert(tree);
         };
-        this.insertBefore = (tree, newNode, oldNode) => {
-            this._insert(tree, oldNode, newNode, 0);
+        this.insertBefore = (newNode, oldNode) => {
+            this._insert(oldNode, newNode, 0);
+            this.list = this.toList(this.tree);
         };
-        this.insertAfter = (tree, newNode, oldNode) => {
-            this._insert(tree, oldNode, newNode, 1);
+        this.insertAfter = (newNode, oldNode) => {
+            this._insert(oldNode, newNode, 1);
+            this.list = this.toList(this.tree);
         };
         /**
          *
          * @param withChild 为false时，将会把删除节点的子级级别提升一级而非删除
          */
-        this.removeNode = (tree, func, withChild = true) => {
+        this.removeNode = (func, withChild = true) => {
+            const tree = this.tree;
             const { children } = this.config;
             const list = [tree];
             while (list.length) {
@@ -208,9 +212,46 @@ class TreeTools {
             }
         };
         this.config = Object.assign({}, DEFAULT_CONFIG, config);
+        if (!input.tree && !input.list) {
+            throw "输入中至少含有tree或list";
+        }
+        this.tree = input.tree || this.fromList(input.list);
+        this.list = input.list || this.toList(input.tree);
     }
 }
 exports.TreeTools = TreeTools;
+TreeTools.findNodeStatic = (tree, func, config = DEFAULT_CONFIG) => {
+    const { children } = config;
+    const list = [...tree];
+    for (let node of list) {
+        if (func(node))
+            return node;
+        node[children] && list.push(...node[children]);
+    }
+    return null;
+};
+/**
+ * 深度优先先序遍历，就地改变tree
+ * todo 需要支持Element类型
+ */
+TreeTools.forEachStatic = (tree, func, config = DEFAULT_CONFIG) => {
+    //const tree = this.tree;
+    const list = [...tree];
+    let children;
+    try {
+        children =
+            typeof window && tree instanceof Element ? "children" : config.children;
+    }
+    catch (e) {
+        children = config.children;
+    }
+    for (let i = 0; i < list.length; i++) {
+        func(list[i]);
+        //@ts-ignore
+        list[i][children] && list.splice(i + 1, 0, ...list[i][children]);
+    }
+    return tree;
+};
 /**
 const makeHandlers = () => {
   const obj = {};

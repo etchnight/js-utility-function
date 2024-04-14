@@ -5,6 +5,7 @@
   "main": "test.ts",
   "scripts": {
     "build": "tsc && babel dist --out-dir es5",
+    "dist": "tsc",
     "dev": "tsx test.ts",
     "commit": "git add . && cz",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"

@@ -14,7 +14,6 @@ require("core-js/modules/es.number.constructor.js");
 require("core-js/modules/es.regexp.exec.js");
 require("core-js/modules/es.regexp.test.js");
 require("core-js/modules/es.regexp.to-string.js");
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 require("core-js/modules/es.array.concat.js");
 require("core-js/modules/es.array.filter.js");
 require("core-js/modules/es.array.for-each.js");
@@ -32,6 +31,7 @@ require("core-js/modules/es.set.js");
 require("core-js/modules/es.string.iterator.js");
 require("core-js/modules/web.dom-collections.for-each.js");
 require("core-js/modules/web.dom-collections.iterator.js");
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArray(iter) { if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter); }
@@ -56,6 +56,7 @@ var DEFAULT_CONFIG = {
 var TreeTools = /*#__PURE__*/_createClass(function TreeTools() {
   var _this = this;
   var config = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  var input = arguments.length > 1 ? arguments[1] : undefined;
   _classCallCheck(this, TreeTools);
   /**
    * @returns 将在原类型中添加类 children 属性，需要使用 as 关键字指明类型
@@ -111,15 +112,27 @@ var TreeTools = /*#__PURE__*/_createClass(function TreeTools() {
   /**
    * 广度优先
    */
-  this.findNode = function (tree, func) {
+  this.findNode = function (func) {
+    var node = TreeTools.findNodeStatic(_this.tree, func, _this.config);
+    if (node) {
+      return new TreeTools(_this.config, {
+        tree: [node]
+      });
+    } else {
+      return null;
+    }
+  };
+  this.findNodeAll = function (func) {
+    var tree = _this.tree;
     var children = _this.config.children;
     var list = _toConsumableArray(tree);
+    var result = [];
     var _iterator3 = _createForOfIteratorHelper(list),
       _step3;
     try {
       for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
         var node = _step3.value;
-        if (func(node)) return node;
+        func(node) && result.push(node);
         node[children] && list.push.apply(list, _toConsumableArray(node[children]));
       }
     } catch (err) {
@@ -127,28 +140,10 @@ var TreeTools = /*#__PURE__*/_createClass(function TreeTools() {
     } finally {
       _iterator3.f();
     }
-    return null;
-  };
-  this.findNodeAll = function (tree, func) {
-    var children = _this.config.children;
-    var list = _toConsumableArray(tree);
-    var result = [];
-    var _iterator4 = _createForOfIteratorHelper(list),
-      _step4;
-    try {
-      for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-        var node = _step4.value;
-        func(node) && result.push(node);
-        node[children] && list.push.apply(list, _toConsumableArray(node[children]));
-      }
-    } catch (err) {
-      _iterator4.e(err);
-    } finally {
-      _iterator4.f();
-    }
     return result;
   };
-  this.findPath = function (tree, func) {
+  this.findPath = function (func) {
+    var tree = _this.tree;
     var path = [];
     var list = _toConsumableArray(tree);
     var visitedSet = new Set();
@@ -167,7 +162,8 @@ var TreeTools = /*#__PURE__*/_createClass(function TreeTools() {
     }
     return null;
   };
-  this.findPathAll = function (tree, func) {
+  this.findPathAll = function (func) {
+    var tree = _this.tree;
     var path = [],
       list = _toConsumableArray(tree),
       result = [];
@@ -188,7 +184,8 @@ var TreeTools = /*#__PURE__*/_createClass(function TreeTools() {
     return result;
   };
   //todo
-  this.filter = function (tree, func) {
+  this.filter = function (func) {
+    var tree = _this.tree;
     var children = _this.config.children;
     function listFilter(list) {
       return list.map(function (node) {
@@ -201,21 +198,18 @@ var TreeTools = /*#__PURE__*/_createClass(function TreeTools() {
     }
     return listFilter(tree);
   };
-  this.forEach = function (tree, func) {
-    var list = _toConsumableArray(tree);
-    var children = tree instanceof Element ? "children" : _this.config.children;
-    for (var i = 0; i < list.length; i++) {
-      func(list[i]);
-      //@ts-ignore
-      list[i][children] && list.splice.apply(list, [i + 1, 0].concat(_toConsumableArray(list[i][children])));
-    }
-    return tree;
+  this.forEach = function (func) {
+    var newTree = TreeTools.forEachStatic(_this.tree, func, _this.config);
+    _this.tree = newTree;
+    _this.list = _this.toList(newTree);
+    return newTree;
   };
   /**
    *
    * @param childrenKey map生成树的children属性的键名
    */
-  this.map = function (tree, func, childrenKey) {
+  this.map = function (func, childrenKey) {
+    var tree = _this.tree;
     var list = _toConsumableArray(tree);
     var id = 1;
     var newObj = function newObj(pid) {
@@ -244,36 +238,37 @@ var TreeTools = /*#__PURE__*/_createClass(function TreeTools() {
     }
     var nodeMap = new Map();
     var result = [];
+    var _iterator4 = _createForOfIteratorHelper(resultList),
+      _step4;
+    try {
+      for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+        var node = _step4.value;
+        node.result[childrenKey] = node.result[childrenKey] || []; //todo 改变了node
+        nodeMap.set("".concat(node.id), node.result);
+      }
+      //console.log(nodeMap);
+    } catch (err) {
+      _iterator4.e(err);
+    } finally {
+      _iterator4.f();
+    }
     var _iterator5 = _createForOfIteratorHelper(resultList),
       _step5;
     try {
       for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-        var node = _step5.value;
-        node.result[childrenKey] = node.result[childrenKey] || []; //todo 改变了node
-        nodeMap.set("".concat(node.id), node.result);
+        var _node2 = _step5.value;
+        var parent = nodeMap.get("".concat(_node2.pid));
+        (parent ? parent[childrenKey] : result).push(_node2.result);
       }
     } catch (err) {
       _iterator5.e(err);
     } finally {
       _iterator5.f();
     }
-    console.log(nodeMap);
-    var _iterator6 = _createForOfIteratorHelper(resultList),
-      _step6;
-    try {
-      for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-        var _node2 = _step6.value;
-        var parent = nodeMap.get("".concat(_node2.pid));
-        (parent ? parent[childrenKey] : result).push(_node2.result);
-      }
-    } catch (err) {
-      _iterator6.e(err);
-    } finally {
-      _iterator6.f();
-    }
     return result;
   };
-  this._insert = function (tree, node, targetNode, after) {
+  this._insert = function (node, targetNode, after) {
+    var tree = _this.tree;
     var children = _this.config.children;
     function insert(list) {
       var idx = list.indexOf(node);
@@ -283,18 +278,21 @@ var TreeTools = /*#__PURE__*/_createClass(function TreeTools() {
     }
     insert(tree);
   };
-  this.insertBefore = function (tree, newNode, oldNode) {
-    _this._insert(tree, oldNode, newNode, 0);
+  this.insertBefore = function (newNode, oldNode) {
+    _this._insert(oldNode, newNode, 0);
+    _this.list = _this.toList(_this.tree);
   };
-  this.insertAfter = function (tree, newNode, oldNode) {
-    _this._insert(tree, oldNode, newNode, 1);
+  this.insertAfter = function (newNode, oldNode) {
+    _this._insert(oldNode, newNode, 1);
+    _this.list = _this.toList(_this.tree);
   };
   /**
    *
    * @param withChild 为false时，将会把删除节点的子级级别提升一级而非删除
    */
-  this.removeNode = function (tree, func) {
-    var withChild = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
+  this.removeNode = function (func) {
+    var withChild = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    var tree = _this.tree;
     var children = _this.config.children;
     var list = [tree];
     var _loop2 = function _loop2() {
@@ -326,8 +324,53 @@ var TreeTools = /*#__PURE__*/_createClass(function TreeTools() {
     }
   };
   this.config = Object.assign({}, DEFAULT_CONFIG, config);
+  if (!input.tree && !input.list) {
+    throw "输入中至少含有tree或list";
+  }
+  this.tree = input.tree || this.fromList(input.list);
+  this.list = input.list || this.toList(input.tree);
 });
 exports.TreeTools = TreeTools;
+TreeTools.findNodeStatic = function (tree, func) {
+  var config = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_CONFIG;
+  var children = config.children;
+  var list = _toConsumableArray(tree);
+  var _iterator6 = _createForOfIteratorHelper(list),
+    _step6;
+  try {
+    for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+      var node = _step6.value;
+      if (func(node)) return node;
+      node[children] && list.push.apply(list, _toConsumableArray(node[children]));
+    }
+  } catch (err) {
+    _iterator6.e(err);
+  } finally {
+    _iterator6.f();
+  }
+  return null;
+};
+/**
+ * 深度优先先序遍历，就地改变tree
+ * todo 需要支持Element类型
+ */
+TreeTools.forEachStatic = function (tree, func) {
+  var config = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_CONFIG;
+  //const tree = this.tree;
+  var list = _toConsumableArray(tree);
+  var children;
+  try {
+    children = (typeof window === "undefined" ? "undefined" : _typeof(window)) && tree instanceof Element ? "children" : config.children;
+  } catch (e) {
+    children = config.children;
+  }
+  for (var i = 0; i < list.length; i++) {
+    func(list[i]);
+    //@ts-ignore
+    list[i][children] && list.splice.apply(list, [i + 1, 0].concat(_toConsumableArray(list[i][children])));
+  }
+  return tree;
+};
 /**
 const makeHandlers = () => {
   const obj = {};
